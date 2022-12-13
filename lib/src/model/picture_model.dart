@@ -18,4 +18,14 @@ class PictureModel {
       required this.scale,
       required this.isNetwork,
       required this.left});
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'url': stringUrl,
+      'top': top,
+      'left': left,
+      'angle': angle,
+      'scale': scale,
+    };
+  }
 }
