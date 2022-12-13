@@ -1,364 +1,214 @@
-library sticker_editor;
-
-import 'dart:io';
-import 'dart:math';
-import 'dart:ui';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:screenshot/screenshot.dart';
-import 'package:stickereditor/constants_value.dart';
-import 'package:stickereditor/src/widgets/custom_button.dart';
-import 'src/model/picture_model.dart';
-import 'src/model/text_model.dart';
-import 'src/widgets/sticker_widget/sticker_box.dart';
-import 'src/widgets/text_widget/text_box.dart';
+import 'package:stickereditor/src/model/picture_model.dart';
 
-export 'src/model/picture_model.dart';
-export 'src/model/text_model.dart';
-export 'package:stickereditor/constants_value.dart';
-export 'src/widgets/sticker_widget/sticker_box.dart';
-export 'src/widgets/text_widget/text_box.dart';
+class StickerEditingBox extends StatefulWidget {
+  /// Your widget should be move within this [boundWidth]
+  final double boundWidth;
 
-typedef SaveCallback = void Function(
-  List<TextModel> texts,
-  List<PictureModel> pictures,
-);
+  /// Your widget should be move within this [boundHeight]
+  final double boundHeight;
 
-/// Sticker editor view
-/// A flutter widget that rotate, zoom and edit text and Sticker
-///
-/// You can pass your fonts
-/// and then get the edited Text Widget
-// ignore: must_be_immutable
-class StickerEditingView extends StatefulWidget {
-  /// Editor's font families
-  final List<String> fonts;
+  /// This picture model where you pass necessary fields
+  final PictureModel pictureModel;
 
-  /// Editor's PalletColor List
-  List<Color>? palletColor;
+  /// If you use onCancel then you Have to manage IsSelected field in PicturModel
+  final Function()? onCancel;
 
-  /// Editor's assetsList List
-  List<String>? assetList;
+  /// If you use onTap then you Have to manage IsSelected field in PicturModel
+  final Function()? onTap;
 
-  /// Editor's image type
-  bool isnetwork;
 
-  bool viewOnly;
-
-  /// Editor's image
-  Widget child;
-
-  /// StickerEditor View Height
-  double? height;
-
-  /// StickerEditor View Width
-  double? width;
-
-  SaveCallback? onSave;
+  final bool viewOnly;
 
   /// Create a [StickerEditingBox] widget
   ///
-  StickerEditingView(
+  /// [pictureModel] detail of your picture
+  /// [onTap] callback function that called when you tap on [StickerEditingBox]
+  /// [onCancel] callback function that called when you tap on Cross icon in [StickerEditingBox] border
+  const StickerEditingBox(
       {Key? key,
-      required this.fonts,
-      required this.child,
-      this.palletColor,
-      this.height,
-      this.width,
-      this.onSave,
+      required this.boundWidth,
+      required this.boundHeight,
+      required this.pictureModel,
       this.viewOnly = false,
-      required this.isnetwork,
-      required this.assetList})
+      this.onTap,
+      this.onCancel})
       : super(key: key);
 
   @override
-  _StickerEditingViewState createState() => _StickerEditingViewState();
+  _StickerEditingBoxState createState() => _StickerEditingBoxState();
 }
 
-class _StickerEditingViewState extends State<StickerEditingView> {
-  // offset
-  double x = 120.0;
-  double y = 160.0;
-  double x1 = 100.0;
-  double y1 = 50.0;
+class _StickerEditingBoxState extends State<StickerEditingBox> {
+  Offset deltaOffset = const Offset(0, 0);
 
-  // selected text perameter
-  double selectedFontSize = 18;
-  TextStyle selectedTextstyle =
-      const TextStyle(color: Colors.black, fontSize: 18, fontFamily: "Lato");
-  String selectedFont = "Lato";
-  TextAlign selectedtextAlign = TextAlign.left;
-  int selectedTextIndex = -1;
-  String selectedtextToShare = "Happy ${weekDays[today - 1]}!";
-
-  // new String and Image List
-  RxList<TextModel> newStringList = <TextModel>[].obs;
-  RxList<PictureModel> newimageList = <PictureModel>[].obs;
+  double? lastScale;
 
   @override
   void initState() {
+    lastScale = widget.pictureModel.scale;
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
-    double width = MediaQuery.of(context).size.width;
+    return Positioned(
+      top: widget.pictureModel.top,
+      left: widget.pictureModel.left,
+      child: Transform.scale(
+        scale: widget.pictureModel.scale,
+        child: Transform.rotate(
+          angle: widget.pictureModel.angle,
+          child: GestureDetector(
+            onScaleStart: (tap) {
+              setState(() => deltaOffset = const Offset(0, 0));
+            },
+            onScaleUpdate: (tap) {
+              if (widget.viewOnly) {
+                return;
+              }
 
-    return Scaffold(
-      body: Obx(
-        () => Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Positioned(
-              top: 0,
-              left: 0,
-              child: SizedBox(
-                height: widget.height ?? height * .8,
-                width: widget.width ?? width * .8,
-                child: Stack(
-                  children: [
-                    widget.viewOnly ?
-                    Container()
-                    :
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          for (var element in newStringList) {
-                            element.isSelected = false;
-                          }
-                          for (var e in newimageList) {
-                            e.isSelected = false;
-                          }
-                        });
-                      },
-                    ),
-                    ...newStringList.map((v) {
-                      return TextEditingBox(
-                          isSelected: v.isSelected,
-                          onTap: () {
-                            if (widget.viewOnly) {
-                              return;
-                            }
+              var intialScale = tap.scale;
+              setState(() {
+                if (tap.pointerCount == 2) {
+                  widget.pictureModel.angle +=
+                      tap.rotation - widget.pictureModel.angle;
 
-                            if (!v.isSelected) {
-                              setState(() {
-                                for (var element in newStringList) {
-                                  element.isSelected = false;
-                                }
-                                for (var e in newimageList) {
-                                  e.isSelected = false;
-                                }
-                                v.isSelected = true;
-                              });
-                            } else {
-                              setState(() {
-                                v.isSelected = false;
-                              });
-                            }
-                          },
-                          onCancel: () {
-                            int index = newStringList
-                                .indexWhere((element) => v == element);
+                  print("onScaleUpdate ==>> ${tap.scale}");
+                  print(['object']);
 
-                            newStringList.removeAt(index);
-                          },
-                          palletColor: widget.palletColor,
-                          fonts: widget.fonts,
-                          newText: v,
-                          boundWidth: width * .90 - width * .20,
-                          boundHeight: height * .70 - height * .07);
-                    }).toList(),
-                    ...newimageList.map((v) {
-                      return StickerEditingBox(
-                          onCancel: () {
-                            int index = newimageList
-                                .indexWhere((element) => v == element);
+                  if ((tap.scale - lastScale!).isNegative) {
+                    widget.pictureModel.scale -= 0.04;
+                  } else {
+                    widget.pictureModel.scale += 0.04;
+                  }
 
-                            newimageList.removeAt(index);
-                          },
-                          onTap: () {
-                            if (widget.viewOnly) {
-                              return;
-                            }
+                  // widget.pictureModel.scale = tap.scale;
+                }
 
-                            if (!v.isSelected) {
-                              setState(() {
-                                for (var element in newStringList) {
-                                  element.isSelected = false;
-                                }
-                                for (var e in newimageList) {
-                                  e.isSelected = false;
-                                }
-                                v.isSelected = true;
-                              });
-                            } else {
-                              setState(() {
-                                v.isSelected = false;
-                              });
-                            }
-                          },
-                          boundWidth: width * .90,
-                          boundHeight: height * .70,
-                          pictureModel: v);
-                    }),
-                    widget.viewOnly ?
-                    widget.child
-                    :
-                    IgnorePointer(
-                      child: widget.child,
-                    )
-                  ],
+                if ((widget.pictureModel.left +
+                            tap.focalPoint.dx -
+                            deltaOffset.dx) <=
+                        widget.boundWidth &&
+                    (widget.pictureModel.left + tap.focalPoint.dx - deltaOffset.dx) >
+                        0) {
+                  widget.pictureModel.left += tap.focalPoint.dx - deltaOffset.dx;
+                }
+                if ((widget.pictureModel.top + tap.focalPoint.dy - deltaOffset.dy) <
+                        widget.boundHeight &&
+                    (widget.pictureModel.top + tap.focalPoint.dy - deltaOffset.dy) >
+                        0) {
+                  widget.pictureModel.top += tap.focalPoint.dy - deltaOffset.dy;
+                }
+
+                deltaOffset = tap.focalPoint;
+              });
+
+              lastScale = tap.scale;
+            },
+            onTap: () {
+              if (widget.onTap == null) {
+                if (widget.pictureModel.isSelected) {
+                  setState(() => widget.pictureModel.isSelected = false);
+                } else {
+                  setState(() => widget.pictureModel.isSelected = true);
+                }
+              } else {
+                widget.onTap!();
+              }
+            },
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: DottedBorder(
+                    color: widget.pictureModel.isSelected
+                        ? Colors.grey[600]!
+                        : Colors.transparent,
+                    padding: const EdgeInsets.all(4),
+                    child: widget.pictureModel.isNetwork
+                        ? Image.network(widget.pictureModel.stringUrl,
+                            height: 50, width: 50)
+                        : Image.asset(widget.pictureModel.stringUrl,
+                            height: 50, width: 50),
+                  ),
                 ),
-              ),
-            ),
-            widget.viewOnly ?
-            Container()
-            :
-            Positioned(
-              bottom: 24,
-              child: SizedBox(
-                width: width,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    CustomeWidgets.customButton(
-                      btnName: 'Add Text',
-                      onPressed: () async {
-                        await showEditBox(
-                          context: context,
-                          textModel: TextModel(
-                              name: selectedtextToShare,
-                              textStyle: const TextStyle(),
-                              top: 50,
-                              isSelected: false,
-                              textAlign: TextAlign.center,
-                              scale: 1,
-                              left: 50),
-                        );
-                      },
-                    ),
-                    CustomeWidgets.customButton(
-                      btnName: 'Add Stickers',
-                      onPressed: () {
-                        selectedTextIndex = -1;
-
-                        stickerWidget(context);
-                      },
-                    ),
-                    CustomeWidgets.customButton(
-                      btnName: 'Save',
-                      onPressed: () async {
-                        setState(() {
-                          for (var e in newStringList) {
-                            e.isSelected = false;
-                          }
-                          for (var e in newimageList) {
-                            e.isSelected = false;
-                          }
-                        });
-
-                        if (widget.onSave != null) {
-                          widget.onSave!(
-                            newStringList.toList(),
-                            newimageList.toList(),
-                          );
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  child: GestureDetector(
+                    onPanUpdate: (tap) {
+                      if (!tap.delta.dx.isNegative) {
+                        setState(() => widget.pictureModel.angle -= 0.05);
+                      } else {
+                        setState(() => widget.pictureModel.angle += 0.05);
+                      }
+                    },
+                    child: widget.pictureModel.isSelected
+                        ? Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: Colors.black, width: 1),
+                                shape: BoxShape.circle,
+                                color: Colors.white),
+                            child: const Icon(Icons.sync_alt,
+                                color: Colors.black, size: 12),
+                          )
+                        : Container(),
+                  ),
+                ),
+                Positioned(
+                  top: 3,
+                  right: 3,
+                  child: InkWell(
+                    onTap: () {
+                      if (widget.onCancel != null) {
+                        widget.onCancel!();
+                      }
+                      setState(() => widget.pictureModel.isSelected = false);
+                    },
+                    child: widget.pictureModel.isSelected
+                        ? Container(
+                            decoration: const BoxDecoration(
+                                shape: BoxShape.circle, color: Colors.white),
+                            child: const Icon(Icons.cancel_outlined,
+                                color: Colors.black, size: 18),
+                          )
+                        : Container(),
+                  ),
+                ),
+                Positioned(
+                  bottom: 3,
+                  right: 3,
+                  child: GestureDetector(
+                      onPanUpdate: (tap) {
+                        if (tap.delta.dx.isNegative &&
+                            widget.pictureModel.scale > .5) {
+                          setState(() => widget.pictureModel.scale -= 0.05);
+                        } else if (!tap.delta.dx.isNegative &&
+                            widget.pictureModel.scale < 5) {
+                          setState(() => widget.pictureModel.scale += 0.05);
                         }
                       },
-                    ),
-                  ],
+                      child: widget.pictureModel.isSelected
+                          ? Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: Colors.black, width: 1),
+                                  color: Colors.white,
+                                  shape: BoxShape.circle),
+                              child: const Icon(Icons.crop,
+                                  color: Colors.black, size: 12))
+                          : Container()),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  Future showEditBox({BuildContext? context, TextModel? textModel}) {
-    return showDialog(
-        context: context!,
-        builder: (context) {
-          final dailogTextController =
-              TextEditingController(text: selectedtextToShare);
-          return AlertDialog(
-            backgroundColor: const Color.fromARGB(240, 200, 200, 200),
-            title: const Text('Edit Text'),
-            content: TextField(
-                controller: dailogTextController,
-                maxLines: 6,
-                minLines: 1,
-                autofocus: true,
-                decoration: InputDecoration(hintText: selectedtextToShare)),
-            actions: [
-              ElevatedButton(
-                  child: const Text('Done'),
-                  onPressed: () {
-                    setState(() {
-                      for (var e in newimageList) {
-                        e.isSelected = false;
-                      }
-                      for (var e in newStringList) {
-                        e.isSelected = false;
-                      }
-                      textModel!.isSelected = true;
-                      textModel.name = dailogTextController.text.trim();
-                      newStringList.add(textModel);
-                    });
-                    Navigator.pop(context);
-                  })
-            ],
-          );
-        });
-  }
-
-  // Sticker widget
-  Future stickerWidget(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
-    double width = MediaQuery.of(context).size.width;
-    selectedTextIndex = -1;
-    return showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return Material(
-            elevation: 15,
-            child: SizedBox(
-              height: height * .4,
-              width: width,
-              child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4),
-                  itemCount: widget.assetList!.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return InkWell(
-                      onTap: () {
-                        for (var e in newimageList) {
-                          e.isSelected = false;
-                        }
-                        for (var e in newStringList) {
-                          e.isSelected = false;
-                        }
-                        newimageList.add(PictureModel(
-                            isNetwork: false,
-                            stringUrl: widget.assetList![index],
-                            top: y1 + 10 < 300 ? y1 + 10 : 300,
-                            isSelected: true,
-                            angle: 0.0,
-                            scale: 1,
-                            left: x1 + 10 < 300 ? x1 + 10 : 300));
-                        x1 = x1 + 10 < 200 ? x1 + 10 : 200;
-                        y1 = y1 + 10 < 200 ? y1 + 10 : 200;
-                        Navigator.pop(context);
-                        setState(() {});
-                      },
-                      child: Image.asset(widget.assetList![index],
-                          height: 50, width: 50),
-                    );
-                  }),
-            ),
-          );
-        });
   }
 }
