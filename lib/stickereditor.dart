@@ -215,6 +215,7 @@ class _StickerEditingViewState extends State<StickerEditingView> {
                     }).toList(),
                     ...newimageList.map((v) {
                       return StickerEditingBox(
+                          viewOnly: widget.viewOnly,
                           onCancel: () {
                             int index = newimageList
                                 .indexWhere((element) => v == element);
