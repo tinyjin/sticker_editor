@@ -178,7 +178,8 @@ class _StickerEditingViewState extends State<StickerEditingView> {
                     ),
                     ...newStringList.map((v) {
                       return TextEditingBox(
-                          isSelected: v.isSelected,
+                          isSelected: !widget.viewOnly && v.isSelected,
+                          viewOnly: widget.viewOnly,
                           onTap: () {
                             if (widget.viewOnly) {
                               return;
