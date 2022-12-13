@@ -122,6 +122,10 @@ class _TextEditingBoxState extends State<TextEditingBox> {
               setState(() => deltaOffset = const Offset(0, 0));
             },
             onScaleUpdate: (tap) {
+              if (widget.viewOnly) {
+                return;
+              }
+
               setState(() {
                 if (tap.pointerCount == 2) {
                   widget.newText.scale = tap.scale;
@@ -142,6 +146,10 @@ class _TextEditingBoxState extends State<TextEditingBox> {
               });
             },
             onTap: () {
+              if (widget.viewOnly) {
+                return;
+              }
+
               if (widget.onTap == null) {
                 setState(() {
                   if (widget.isSelected) {
@@ -159,10 +167,6 @@ class _TextEditingBoxState extends State<TextEditingBox> {
                       palletColor: _palletColor!);
                 }
               } else {
-                if (widget.viewOnly) {
-                  return;
-                }
-
                 widget.onTap!();
                 if (widget.isSelected == false) {
                   textModelBottomSheet(
