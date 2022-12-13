@@ -68,6 +68,16 @@ class StickerEditingView extends StatefulWidget {
   /// Initial Picture List
   List<PictureModel> pictures;
 
+  /// Button specific UIs
+  String textButtonText;
+  Color textButtonColor;
+
+  String stickerButtonText;
+  Color stickerButtonColor;
+
+  String saveButtonText;
+  Color saveButtonColor;
+
   /// Create a [StickerEditingBox] widget
   ///
   StickerEditingView(
@@ -82,6 +92,12 @@ class StickerEditingView extends StatefulWidget {
       this.viewOnly = false,
       this.texts = const [],
       this.pictures = const [],
+      this.textButtonText = 'Add Text',
+      this.textButtonColor = Colors.blue,
+      this.stickerButtonText = 'Add Stickers',
+      this.stickerButtonColor = Colors.blue,
+      this.saveButtonText = 'Save',
+      this.saveButtonColor = Colors.blue,
       required this.isnetwork,
       required this.assetList})
       : super(key: key);
@@ -250,7 +266,8 @@ class _StickerEditingViewState extends State<StickerEditingView> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     CustomeWidgets.customButton(
-                      btnName: 'Add Text',
+                      btnName: widget.textButtonText,
+                      color: widget.textButtonColor,
                       onPressed: () async {
                         await showEditBox(
                           context: context,
@@ -266,7 +283,8 @@ class _StickerEditingViewState extends State<StickerEditingView> {
                       },
                     ),
                     CustomeWidgets.customButton(
-                      btnName: 'Add Stickers',
+                      btnName: widget.stickerButtonText,
+                      color: widget.stickerButtonColor,
                       onPressed: () {
                         selectedTextIndex = -1;
 
@@ -274,7 +292,8 @@ class _StickerEditingViewState extends State<StickerEditingView> {
                       },
                     ),
                     CustomeWidgets.customButton(
-                      btnName: 'Save',
+                      btnName: widget.saveButtonText,
+                      color: widget.saveButtonColor,
                       onPressed: () async {
                         setState(() {
                           for (var e in newStringList) {
