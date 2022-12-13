@@ -18,6 +18,15 @@ class TextModel {
       required this.scale,
       required this.left});
 
+  TextModel.fromJson(Map<String, dynamic> data)
+    : name = data['text'] ?? '',
+      textStyle = TextStyle(), // todo mapping
+      top = data['top'] ?? 0,
+      left = data['left'] ?? 0,
+      scale = data['scale'] ?? 1,
+      isSelected = false,
+      textAlign = TextAlign.center; // todo mapping
+
   Map<String, dynamic> toJson() {
     return {
       'text': name,
